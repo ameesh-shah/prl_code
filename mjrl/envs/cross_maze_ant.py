@@ -24,7 +24,7 @@ class CrossMazeAntEnv(AntEnv):
             ctrl_cost_weight=1e-2,
             contact_cost_weight=1e-3,
             healthy_reward=5e-2,
-            terminate_when_unhealthy=False,
+            terminate_when_unhealthy=True,
             healthy_z_range=(0.2, 1.0),
             contact_force_range=(-1.0, 1.0),
             reset_noise_scale=0.1,
@@ -119,16 +119,17 @@ class CrossMazeAntEnv(AntEnv):
 # with three possible goal positions
 class CrossMazeAntRandomEnv(AntEnv):
     def __init__(self,
-                possible_goal_position=[[6, -6], [12, 0], [6, 6]],
+                possible_goal_positions=[[6, -6], [12, 0], [6, 6]],
                 goal_reward_weight=3e-1,
                 goal_radius=1,
                 **kwargs):
         
-        self.possible_goal_positions = possible_goal_position
+        self.possible_goal_positions = possible_goal_positions
         self.goal_position = self.possible_goal_positions[
             np.random.choice(len(self.possible_goal_positions))]
         self.goal_reward_weight = goal_reward_weight
         self.goal_radius = goal_radius
+        self.count_num = 0
 
         # distance from starting point to goal position
         self.total_distance = np.linalg.norm(self.goal_position, ord=2)
@@ -139,7 +140,7 @@ class CrossMazeAntRandomEnv(AntEnv):
             ctrl_cost_weight=1e-2,
             contact_cost_weight=1e-3,
             healthy_reward=5e-2,
-            terminate_when_unhealthy=False,
+            terminate_when_unhealthy=True,
             healthy_z_range=(0.2, 1.0),
             contact_force_range=(-1.0, 1.0),
             reset_noise_scale=0.1,
@@ -153,8 +154,14 @@ class CrossMazeAntRandomEnv(AntEnv):
         xy_position_after = self.get_body_com("torso")[:2].copy()
 
         # check if reach the goal
-        goal_distance = np.linalg.norm(xy_position_after - self.goal_position, ord=2)
-        goal_reached = goal_distance < self.goal_radius
+        some_goal_reached = False
+        goal_reached = False
+        for possible_goal in self.possible_goal_positions:
+            goal_distance = np.linalg.norm(xy_position_after - possible_goal, ord=2)
+            if goal_distance < self.goal_radius:
+                some_goal_reached = True
+                if possible_goal == self.goal_position:
+                    goal_reached = True
 
         # update goal_distance if reached
         goal_distance = 0.0 if goal_reached else goal_distance - self.goal_radius
@@ -173,9 +180,13 @@ class CrossMazeAntRandomEnv(AntEnv):
         costs = ctrl_cost + contact_cost
 
         reward = rewards - costs
-        
+        #TODO: make this less hacky
+        if self.count_num > 15 and x_velocity == 0 and y_velocity == 0:
+            crashed = True
+        else:
+            crashed = False
         # the easiest way to terminate current trajectory
-        done = True if goal_reached else self.done
+        done = True if goal_reached or some_goal_reached or crashed else self.done
 
         observation = np.concatenate([self._get_obs(), self.goal_position])
 
@@ -211,7 +222,7 @@ class CrossMazeAntRandomEnv(AntEnv):
         # reset goal position
         self.goal_position = self.possible_goal_positions[
             np.random.choice(len(self.possible_goal_positions))]
-
+        self.count_num = 0
         # distance from starting point to goal position
         self.total_distance = np.linalg.norm(self.goal_position, ord=2)
 
