@@ -1,5 +1,7 @@
 # Programmatic Reinforcement Learning Without Oracles
 
+This code is gratefully adapted from the authors of Programmatic Reinforcement Learning without Oracles, in ICLR 2022. Credit to Wenjie Qiu and He Zhu.
+
 ## Installation
 
 We tested our code on Ubuntu 18.04 LTS x86_64 platform. Please make sure to read below instructions before using requirements.txt.
