@@ -5,6 +5,7 @@ import time
 import copy
 import getopt
 import os
+from train import run_train
 
 os.environ['OMP_NUM_THREADS'] = '1'
 
@@ -33,7 +34,10 @@ def deploy_behavior_program_in_maze(env_object, program_method, collect_data=Fal
     done = False
     collected_reward = 0
     while not done:
-        action = program_method(obs)
+        #action = program_method(obs)
+        obs_in = torch.tensor(obs).float().unsqueeze(0)
+        action = program_method(obs_in)
+        action = action.squeeze().detach().numpy()
         if collect_data:
             states.append(obs)
             actions.append(action)
@@ -150,4 +154,6 @@ input_dict = dict(models=ANT_MODELS, functions=ANT_FUNCTIONS, all_functions=ALL_
 
 behaviorprog = AntBehaviorProgram()
 #deploy_behavior_program_in_maze(e, behaviorprog.move_ant_to_left_goal)
-#0collect_data_for_imitation_learning(e, behaviorprog.move_ant_to_left_goal, 10, outfilepath="ant_maze_left_test")
+#collect_data_for_imitation_learning(e, behaviorprog.move_ant_to_left_goal, 10, outfilepath="ant_maze_left_test")
+model = run_train("ant_maze_left_test")
+deploy_behavior_program_in_maze(e, model)
