@@ -34,10 +34,10 @@ def deploy_behavior_program_in_maze(env_object, program_method, collect_data=Fal
     done = False
     collected_reward = 0
     while not done:
-        #action = program_method(obs)
-        obs_in = torch.tensor(obs).float().unsqueeze(0)
-        action = program_method(obs_in)
-        action = action.squeeze().detach().numpy()
+        action = program_method(obs)
+        # obs_in = torch.tensor(obs).float().unsqueeze(0)
+        # action = program_method(obs_in)
+        # action = action.squeeze().detach().numpy()
         if collect_data:
             states.append(obs)
             actions.append(action)
@@ -102,6 +102,17 @@ class AntBehaviorProgram:
             return self.up_model.act(formatted_observation, deterministic=True)
         else:
             return self.left_model.act(formatted_observation, deterministic=True)
+
+    def move_ant_distribution(self, current_observation):
+        current_observation = torch.as_tensor(current_observation, dtype=torch.float32)
+        formatted_observation = current_observation[self.index_action_space]
+        choice = np.random.choice(3, p=[0.5, 0.25, 0.25])
+        if choice == 0:
+            return self.up_model.act(formatted_observation, deterministic=True)
+        elif choice == 1:
+            return self.left_model.act(formatted_observation, deterministic=True)
+        else:
+            return self.right_model.act(formatted_observation, deterministic=True)
     
     def move_ant_to_right_goal(self, current_observation):
         xypos = get_ant_position(current_observation)
@@ -153,7 +164,7 @@ prog_iter = 10
 input_dict = dict(models=ANT_MODELS, functions=ANT_FUNCTIONS, all_functions=ALL_ANT_FUNCTIONS, input_dim=115, num_action_space=8, index_action_space=range(2, 113))
 
 behaviorprog = AntBehaviorProgram()
-#deploy_behavior_program_in_maze(e, behaviorprog.move_ant_to_left_goal)
+deploy_behavior_program_in_maze(e, behaviorprog.move_ant_distribution)
 #collect_data_for_imitation_learning(e, behaviorprog.move_ant_to_left_goal, 10, outfilepath="ant_maze_left_test")
-model = run_train("ant_maze_left_test")
-deploy_behavior_program_in_maze(e, model)
+#model = run_train("ant_maze_left_test")
+#deploy_behavior_program_in_maze(e, model)
