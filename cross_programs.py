@@ -65,7 +65,26 @@ def collect_data_for_imitation_learning(env_object, program_method, num_runs=100
         np.save(actionout, all_action_data)
     print("Data saved to {} and {}".format(statefilepath, actionfilepath))
 
-
+def collect_data_for_gail(env_object, num_runs=100):
+    all_state_data = []
+    all_action_data = []
+    for _ in tqdm(range(num_runs)):
+        traj_choice = np.random.choice(3, p=[0.5, 0.25, 0.25])
+        behaviorprog = AntBehaviorProgram()
+        if traj_choice == 0:
+            program_method = behaviorprog.move_ant_to_top_goal
+        elif traj_choice == 1:
+            program_method = behaviorprog.move_ant_to_left_goal
+        else:
+            program_method = behaviorprog.move_ant_to_right_goal
+        states, actions = deploy_behavior_program_in_maze(env_object, program_method, collect_data=True)
+        all_state_data.extend(states)
+        all_action_data.extend(actions)
+    print("Number of states collected is {}".format(len(all_state_data)))
+    state_action_tuples = []
+    for i in range(len(all_state_data)):
+        state_action_tuples.append((all_state_data[i], all_action_data[i]))
+    return state_action_tuples
 
 
 class AntBehaviorProgram:
@@ -102,17 +121,6 @@ class AntBehaviorProgram:
             return self.up_model.act(formatted_observation, deterministic=True)
         else:
             return self.left_model.act(formatted_observation, deterministic=True)
-
-    def move_ant_distribution(self, current_observation):
-        current_observation = torch.as_tensor(current_observation, dtype=torch.float32)
-        formatted_observation = current_observation[self.index_action_space]
-        choice = np.random.choice(3, p=[0.5, 0.25, 0.25])
-        if choice == 0:
-            return self.up_model.act(formatted_observation, deterministic=True)
-        elif choice == 1:
-            return self.left_model.act(formatted_observation, deterministic=True)
-        else:
-            return self.right_model.act(formatted_observation, deterministic=True)
     
     def move_ant_to_right_goal(self, current_observation):
         xypos = get_ant_position(current_observation)
@@ -150,6 +158,9 @@ def f2_ant(x):
     Y = Variable(x[:, 1:2], requires_grad=False)
     return Variable(torch.linalg.norm(torch.cat((X, Y), dim=1), dim=1, keepdim=True), requires_grad=False)
 
+def get_gym_env():
+    return GymEnv('mjrl_cross_maze_ant_random-v1', expose_all_qpos=False)
+
 # get our env object
 e = GymEnv('mjrl_cross_maze_ant_random-v1', expose_all_qpos=False)
 ANT_FUNCTIONS = [(f0_ant, 4), (f1_ant, 1), (f2_ant, 1)]
@@ -163,8 +174,9 @@ arch_iter = 1
 prog_iter = 10
 input_dict = dict(models=ANT_MODELS, functions=ANT_FUNCTIONS, all_functions=ALL_ANT_FUNCTIONS, input_dim=115, num_action_space=8, index_action_space=range(2, 113))
 
-behaviorprog = AntBehaviorProgram()
-deploy_behavior_program_in_maze(e, behaviorprog.move_ant_distribution)
+#behaviorprog = AntBehaviorProgram()
+#deploy_behavior_program_in_maze(e, behaviorprog.move_ant_to_left_goal)
 #collect_data_for_imitation_learning(e, behaviorprog.move_ant_to_left_goal, 10, outfilepath="ant_maze_left_test")
+
 #model = run_train("ant_maze_left_test")
 #deploy_behavior_program_in_maze(e, model)
