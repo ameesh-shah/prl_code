@@ -62,6 +62,38 @@ def collect_data_for_imitation_learning(env_object, program_method, num_runs=100
     print("Data saved to {} and {}".format(statefilepath, actionfilepath))
 
 
+def collect_data_for_generative_learning(env_object, distr=(.5, .25, .25), num_runs=1000, outfilepath=None):
+    all_state_data = []
+    all_action_data = []
+    counts = [0, 0, 0]
+    total_num_states = 0
+    behaviorprog = AntBehaviorProgram()
+    for _ in tqdm(range(num_runs)):
+        idx_choice = np.random.choice(range(3), p=distr)
+        if idx_choice == 0:
+            program_method = behaviorprog.move_ant_to_top_goal
+        elif idx_choice == 1:
+            program_method = behaviorprog.move_ant_to_left_goal
+        else:
+            program_method = behaviorprog.move_ant_to_right_goal
+        counts[idx_choice] += 1
+        states, actions = deploy_behavior_program_in_maze(
+            env_object, program_method, collect_data=True)
+        all_state_data.append(states)
+        all_action_data.append(actions)
+        total_num_states += len(states)
+    print("Number of trajectories collected is {}".format(len(all_state_data)))
+    print("Average number of states per traj is {}".format(total_num_states / num_runs))
+    print("Distribution over programs is {}".format(counts))
+    if outfilepath is None:
+        outfilepath = "generative_base"
+    statefilepath = outfilepath + "_states"
+    actionfilepath = outfilepath + "_actions"
+    with open(statefilepath, "wb") as stateout:
+        np.save(stateout, all_state_data)
+    with open(actionfilepath, "wb") as actionout:
+        np.save(actionout, all_action_data)
+    print("Data saved to {} and {}".format(statefilepath, actionfilepath))
 
 
 class AntBehaviorProgram:
@@ -136,7 +168,7 @@ def f2_ant(x):
     return Variable(torch.linalg.norm(torch.cat((X, Y), dim=1), dim=1, keepdim=True), requires_grad=False)
 
 # get our env object
-e = GymEnv('mjrl_cross_maze_ant_random-v1', expose_all_qpos=False)
+e = GymEnv('mjrl_all_goals_ant-v1', expose_all_qpos=False)
 ANT_FUNCTIONS = [(f0_ant, 4), (f1_ant, 1), (f2_ant, 1)]
 ALL_ANT_FUNCTIONS = [([1, 1, 1], 6)]
 
@@ -148,6 +180,6 @@ arch_iter = 1
 prog_iter = 10
 input_dict = dict(models=ANT_MODELS, functions=ANT_FUNCTIONS, all_functions=ALL_ANT_FUNCTIONS, input_dim=115, num_action_space=8, index_action_space=range(2, 113))
 
-behaviorprog = AntBehaviorProgram()
 #deploy_behavior_program_in_maze(e, behaviorprog.move_ant_to_left_goal)
 #0collect_data_for_imitation_learning(e, behaviorprog.move_ant_to_left_goal, 10, outfilepath="ant_maze_left_test")
+collect_data_for_generative_learning(e, outfilepath="ant_maze_generative_data")

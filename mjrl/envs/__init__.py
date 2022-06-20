@@ -49,6 +49,12 @@ register(
     max_episode_steps=500
 )
 
+register(
+    id='mjrl_all_goals_ant-v1',
+    entry_point='mjrl.envs:CrossMazeAntAllEnv',
+    max_episode_steps=500
+)
+
 
 register(
     id='mjrl_half_cheetah_forward-v3',
@@ -132,7 +138,7 @@ from mjrl.envs.mujoco_env import MujocoEnv
 # ^^^^^ so that user gets the correct error
 # message if mujoco is not installed correctly
 from mjrl.envs.ant_v3 import AntEnvUp, AntEnvDown, AntEnvLeft, AntEnvRight
-from mjrl.envs.cross_maze_ant import CrossMazeAntEnv, CrossMazeAntRandomEnv
+from mjrl.envs.cross_maze_ant import CrossMazeAntEnv, CrossMazeAntRandomEnv, CrossMazeAntAllEnv
 from mjrl.envs.random_goal_ant import RandomGoalAntEnv
 from mjrl.envs.half_cheetah_v3 import HalfCheetahForwardEnv, HalfCheetahJumpEnv
 from mjrl.envs.half_cheetah_hurdle import HalfCheetahHurdleEnv
