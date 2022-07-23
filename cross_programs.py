@@ -181,5 +181,6 @@ prog_iter = 10
 input_dict = dict(models=ANT_MODELS, functions=ANT_FUNCTIONS, all_functions=ALL_ANT_FUNCTIONS, input_dim=115, num_action_space=8, index_action_space=range(2, 113))
 
 #deploy_behavior_program_in_maze(e, behaviorprog.move_ant_to_left_goal)
-#0collect_data_for_imitation_learning(e, behaviorprog.move_ant_to_left_goal, 10, outfilepath="ant_maze_left_test")
-collect_data_for_generative_learning(e, outfilepath="ant_maze_generative_data")
+behaviorprog = AntBehaviorProgram()
+collect_data_for_imitation_learning(e, behaviorprog.move_ant_to_left_goal, 100, outfilepath="ant_maze_left_train")
+#collect_data_for_generative_learning(e, outfilepath="ant_maze_generative_data")
