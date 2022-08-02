@@ -19,6 +19,9 @@ from mjrl.utils.gym_env import GymEnv
 import mjrl.envs
 import time as timer
 
+NOISE = True
+NOISE_FUNC = lambda : np.random.randn(8)*0.1
+
 ANT_MODELS = []
 for direction in ['up', 'down', 'left', 'right']:
     filename = os.getcwd() + '/primitives/ant/' + direction + '.pt'
@@ -46,8 +49,10 @@ def deploy_behavior_program_in_maze(env_object, program_method, collect_data=Fal
 def collect_data_for_imitation_learning(env_object, program_method, num_runs=100, outfilepath=None):
     all_state_data = []
     all_action_data = []
+    all_paths = []
     for _ in tqdm(range(num_runs)):
         states, actions = deploy_behavior_program_in_maze(env_object, program_method, collect_data=True)
+        all_paths.append([state[:2] for state in states])
         all_state_data.extend(states)
         all_action_data.extend(actions)
     print("Number of states collected is {}".format(len(all_state_data)))
@@ -55,11 +60,14 @@ def collect_data_for_imitation_learning(env_object, program_method, num_runs=100
         outfilepath = "IL_base"
     statefilepath = outfilepath + "_states"
     actionfilepath = outfilepath + "_actions"
+    pathfilepath = outfilepath + "_paths"
     with open(statefilepath, "wb") as stateout:
         np.save(stateout, all_state_data)
     with open(actionfilepath, "wb") as actionout:
         np.save(actionout, all_action_data)
-    print("Data saved to {} and {}".format(statefilepath, actionfilepath))
+    with open(pathfilepath, "wb") as pathout:
+        np.save(pathout, all_paths)
+    print("Data saved to {}, {}, and {}".format(statefilepath, actionfilepath, pathfilepath))
 
 
 def collect_data_for_generative_learning(env_object, distr=(.5, .25, .25), num_runs=1000, outfilepath=None):
@@ -119,7 +127,7 @@ class AntBehaviorProgram:
         formatted_observation = current_observation[self.index_action_space]
         self.counter += 1
 
-        return self.up_model.act(formatted_observation, deterministic=True)
+        return self.up_model.act(formatted_observation, deterministic=True) + NOISE*NOISE_FUNC()
     
     def move_ant_to_left_goal(self, current_observation):
         xypos = get_ant_position(current_observation)
@@ -127,9 +135,11 @@ class AntBehaviorProgram:
         current_observation = torch.as_tensor(current_observation, dtype=torch.float32)
         formatted_observation = current_observation[self.index_action_space]
         if xpos < 4.0:
-            return self.up_model.act(formatted_observation, deterministic=True)
+            #print(f"up-act {self.up_model.act(formatted_observation, deterministic=True)}")
+            return self.up_model.act(formatted_observation, deterministic=True) + NOISE*NOISE_FUNC()
         else:
-            return self.left_model.act(formatted_observation, deterministic=True)
+            #print(f"left-act {self.left_model.act(formatted_observation, deterministic=True)}")
+            return self.left_model.act(formatted_observation, deterministic=True) + NOISE*NOISE_FUNC()
     
     def move_ant_to_right_goal(self, current_observation):
         xypos = get_ant_position(current_observation)
@@ -138,9 +148,9 @@ class AntBehaviorProgram:
             current_observation, dtype=torch.float32)
         formatted_observation = current_observation[self.index_action_space]
         if xpos < 4.0:
-            return self.up_model.act(formatted_observation, deterministic=True)
+            return self.up_model.act(formatted_observation, deterministic=True) + NOISE*NOISE_FUNC()
         else:
-            return self.right_model.act(formatted_observation, deterministic=True)
+            return self.right_model.act(formatted_observation, deterministic=True) + NOISE*NOISE_FUNC()
         
 def get_ant_position(full_observation):
     return full_observation[0:2]
@@ -182,5 +192,9 @@ input_dict = dict(models=ANT_MODELS, functions=ANT_FUNCTIONS, all_functions=ALL_
 
 #deploy_behavior_program_in_maze(e, behaviorprog.move_ant_to_left_goal)
 behaviorprog = AntBehaviorProgram()
-collect_data_for_imitation_learning(e, behaviorprog.move_ant_to_left_goal, 100, outfilepath="ant_maze_left_train")
-#collect_data_for_generative_learning(e, outfilepath="ant_maze_generative_data")
+collect_data_for_imitation_learning(e, behaviorprog.move_ant_to_left_goal, 100, outfilepath="../data/ant_maze_left_train")
+collect_data_for_imitation_learning(e, behaviorprog.move_ant_to_left_goal, 50, outfilepath="../data/ant_maze_left_test")
+collect_data_for_imitation_learning(e, behaviorprog.move_ant_to_right_goal, 100, outfilepath="../data/ant_maze_right_train")
+collect_data_for_imitation_learning(e, behaviorprog.move_ant_to_right_goal, 50, outfilepath="../data/ant_maze_right_test")
+collect_data_for_imitation_learning(e, behaviorprog.move_ant_to_top_goal, 100, outfilepath="../data/ant_maze_top_train")
+collect_data_for_imitation_learning(e, behaviorprog.move_ant_to_top_goal, 50, outfilepath="../data/ant_maze_top_test")
