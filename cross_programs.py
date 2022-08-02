@@ -20,7 +20,7 @@ import mjrl.envs
 import time as timer
 
 NOISE = True
-NOISE_FUNC = lambda : np.random.randn(8)*0.1
+NOISE_FUNC = lambda : np.random.randn(8)*0.2
 
 ANT_MODELS = []
 for direction in ['up', 'down', 'left', 'right']:
@@ -41,10 +41,14 @@ def deploy_behavior_program_in_maze(env_object, program_method, collect_data=Fal
             states.append(obs)
             actions.append(action)
         obs, rew, done, info = env_object.step(action)
+
         collected_reward += rew
         if not collect_data:
             env_object.render()
-    return states, actions
+    if info['finished']:
+        return states, actions
+    else:
+        return None, None
     
 def collect_data_for_imitation_learning(env_object, program_method, num_runs=100, outfilepath=None):
     all_state_data = []
@@ -52,6 +56,8 @@ def collect_data_for_imitation_learning(env_object, program_method, num_runs=100
     all_paths = []
     for _ in tqdm(range(num_runs)):
         states, actions = deploy_behavior_program_in_maze(env_object, program_method, collect_data=True)
+        if states is None:
+            continue
         all_paths.append([state[:2] for state in states])
         all_state_data.extend(states)
         all_action_data.extend(actions)
@@ -192,9 +198,9 @@ input_dict = dict(models=ANT_MODELS, functions=ANT_FUNCTIONS, all_functions=ALL_
 
 #deploy_behavior_program_in_maze(e, behaviorprog.move_ant_to_left_goal)
 behaviorprog = AntBehaviorProgram()
-collect_data_for_imitation_learning(e, behaviorprog.move_ant_to_left_goal, 100, outfilepath="../data/ant_maze_left_train")
-collect_data_for_imitation_learning(e, behaviorprog.move_ant_to_left_goal, 50, outfilepath="../data/ant_maze_left_test")
-collect_data_for_imitation_learning(e, behaviorprog.move_ant_to_right_goal, 100, outfilepath="../data/ant_maze_right_train")
-collect_data_for_imitation_learning(e, behaviorprog.move_ant_to_right_goal, 50, outfilepath="../data/ant_maze_right_test")
-collect_data_for_imitation_learning(e, behaviorprog.move_ant_to_top_goal, 100, outfilepath="../data/ant_maze_top_train")
-collect_data_for_imitation_learning(e, behaviorprog.move_ant_to_top_goal, 50, outfilepath="../data/ant_maze_top_test")
+collect_data_for_imitation_learning(e, behaviorprog.move_ant_to_left_goal, 100, outfilepath=f"../data/ant_maze{'_noise' if NOISE else ''}_left_train")
+collect_data_for_imitation_learning(e, behaviorprog.move_ant_to_left_goal, 50, outfilepath=f"../data/ant_maze{'_noise' if NOISE else ''}_left_test")
+collect_data_for_imitation_learning(e, behaviorprog.move_ant_to_right_goal, 100, outfilepath=f"../data/ant_maze{'_noise' if NOISE else ''}_right_train")
+collect_data_for_imitation_learning(e, behaviorprog.move_ant_to_right_goal, 50, outfilepath=f"../data/ant_maze{'_noise' if NOISE else ''}_right_test")
+collect_data_for_imitation_learning(e, behaviorprog.move_ant_to_top_goal, 100, outfilepath=f"../data/ant_maze{'_noise' if NOISE else ''}_top_train")
+collect_data_for_imitation_learning(e, behaviorprog.move_ant_to_top_goal, 50, outfilepath=f"../data/ant_maze{'_noise' if NOISE else ''}_top_test")
